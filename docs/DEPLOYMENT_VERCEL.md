@@ -27,7 +27,7 @@ Copie `.env.example` somente para desenvolvimento local. B0 não possui segredos
 
 ## Deploy
 
-Conecte o repositório à Vercel e use as configurações automáticas do projeto. A função é descoberta em `api/mcp.ts`; `vercel.json` limita sua duração a 10 segundos.
+Conecte o repositório à Vercel e use as configurações automáticas do projeto. A função é descoberta em `api/mcp.ts`; `vercel.json` limita sua duração a 10 segundos. O diretório `public` é mantido para compatibilidade com a configuração de Output Directory do projeto Vercel.
 
 Por CLI:
 
