@@ -39,6 +39,8 @@ Tabela conceitual `blender_jobs`:
 - attempts;
 - correlation_id.
 
+No B1, a tabela também mantém `updated_at`, `lease_owner` e `lease_expires_at` como metadados internos. O MCP não expõe os campos de lease. O claim usa uma função Postgres atômica com row lock e `SKIP LOCKED`; isso evita que dois consumers recebam o mesmo job sem criar um worker antecipadamente.
+
 Estados:
 - queued;
 - processing;

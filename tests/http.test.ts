@@ -3,14 +3,18 @@ import type { AddressInfo } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { afterEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import handler from "../api/mcp.js";
-import { jobService } from "../src/services/inMemoryJobService.js";
+import { resetEnvCacheForTests } from "../src/config/env.js";
 
 describe("Streamable HTTP endpoint", () => {
-  afterEach(() => jobService.clear());
+  beforeEach(() => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key-not-a-secret";
+    resetEnvCacheForTests();
+  });
 
-  it("initializes and lists B0 tools over HTTP", async () => {
+  it("initializes and lists B1 tools over HTTP", async () => {
     const httpServer = createServer((req, res) => {
       void (async () => {
         req.setEncoding("utf8");

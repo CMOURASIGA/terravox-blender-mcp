@@ -45,6 +45,15 @@ interface BlenderJob {
 - payload nunca contém segredo.
 - result nunca contém caminho local sensível.
 
+## Persistência B1
+
+- `blender.export_glb` cria o job em `queued`, `attempts: 0` e sem timestamps de execução;
+- `claim_blender_job` faz claim atômico com `FOR UPDATE SKIP LOCKED`;
+- o claim muda para `processing`, incrementa `attempts` e define uma lease limitada;
+- uma lease vencida pode ser reclamada atomicamente;
+- `lease_owner`, `lease_expires_at` e `updated_at` são internos e não integram a resposta MCP;
+- transições inválidas são bloqueadas no serviço e por trigger no Postgres.
+
 ## Correlation
 
 Toda execução deve carregar `correlationId` entre:

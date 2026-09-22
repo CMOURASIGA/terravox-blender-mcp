@@ -4,7 +4,8 @@ import { z } from "zod";
 import { getEnv } from "../config/env.js";
 import { assetIdSchema, exportProfileSchema, jobIdSchema } from "../domain/job.js";
 import { logger } from "../lib/logger.js";
-import { jobService } from "../services/inMemoryJobService.js";
+import { JobService } from "../services/jobService.js";
+import { getJobService } from "../services/serviceContainer.js";
 
 export const MCP_TOOL_NAMES = [
   "blender.health",
@@ -19,7 +20,7 @@ function toolResult(value: Record<string, unknown>) {
   };
 }
 
-export function createMcpServer(): McpServer {
+export function createMcpServer(jobService: JobService = getJobService()): McpServer {
   const env = getEnv();
   const server = new McpServer({
     name: env.MCP_SERVER_NAME,
@@ -30,22 +31,22 @@ export function createMcpServer(): McpServer {
     "blender.health",
     {
       title: "Blender MCP health",
-      description: "Reports B0 MCP and fake in-memory job store status.",
+      description: "Reports the MCP, persistent job store and worker configuration status.",
       inputSchema: {},
       outputSchema: {
         status: z.literal("ok"),
         server: z.string(),
         version: z.string(),
-        jobStore: z.object({ type: z.literal("in-memory"), status: z.literal("ok"), jobs: z.number() }),
+        jobStore: z.object({ type: z.literal("supabase-postgres"), status: z.literal("ok") }),
         worker: z.object({ status: z.literal("not-configured") }),
       },
     },
-    () =>
+    async () =>
       toolResult({
         status: "ok",
         server: env.MCP_SERVER_NAME,
         version: env.MCP_SERVER_VERSION,
-        jobStore: { type: "in-memory", status: "ok", jobs: jobService.size },
+        jobStore: await jobService.health(),
         worker: { status: "not-configured" },
       }),
   );
@@ -53,21 +54,21 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "blender.export_glb",
     {
-      title: "Create fake GLB export job",
-      description: "Creates a completed in-memory B0 simulation job. No Blender process is executed.",
+      title: "Queue simulated GLB export job",
+      description: "Persists a queued B1 simulation job. No Blender process is executed.",
       inputSchema: {
         assetId: assetIdSchema.describe("Backend asset identifier, never a filesystem path."),
         exportProfile: exportProfileSchema.default("terravox-default"),
       },
       outputSchema: {
         jobId: jobIdSchema,
-        status: z.literal("completed"),
+        status: z.literal("queued"),
         correlationId: jobIdSchema,
         simulated: z.literal(true),
       },
     },
-    ({ assetId, exportProfile }) => {
-      const job = jobService.createFakeExport({
+    async ({ assetId, exportProfile }) => {
+      const job = await jobService.createSimulatedExport({
         assetId,
         exportProfile,
         correlationId: randomUUID(),
@@ -86,11 +87,11 @@ export function createMcpServer(): McpServer {
     "blender.get_job_status",
     {
       title: "Get Blender job status",
-      description: "Returns an in-memory B0 job by identifier.",
+      description: "Returns a persistent B1 job by identifier.",
       inputSchema: { jobId: jobIdSchema },
     },
-    ({ jobId }) => {
-      const job = jobService.getById(jobId);
+    async ({ jobId }) => {
+      const job = await jobService.getById(jobId);
       if (!job) {
         logger.warn("job.not_found", { jobId });
         return {
