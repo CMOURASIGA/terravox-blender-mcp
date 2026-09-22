@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { assetIdSchema, InvalidJobTransitionError, type BlenderJob } from "../src/domain/job.js";
+import {
+  assetIdSchema,
+  blenderJobSchema,
+  InvalidJobTransitionError,
+  type BlenderJob,
+} from "../src/domain/job.js";
 import { JobService } from "../src/services/jobService.js";
 import { FakeJobRepository } from "./support/fakeJobRepository.js";
 
@@ -75,5 +80,24 @@ describe("B1 persistent job service", () => {
   it("does not accept filesystem paths as asset identifiers", () => {
     expect(assetIdSchema.safeParse("/tmp/asset.blend").success).toBe(false);
     expect(assetIdSchema.safeParse("chr-explorer-v001").success).toBe(true);
+  });
+
+  it("accepts Postgres ISO timestamps with a UTC offset", () => {
+    expect(
+      blenderJobSchema.safeParse({
+        id: "b1000000-0000-4000-8000-202609220001",
+        operation: "export_glb",
+        status: "queued",
+        assetId: "chr-explorer-v001",
+        payload: { simulated: true },
+        result: null,
+        error: null,
+        attempts: 0,
+        createdAt: "2026-09-22T17:38:00.000000+00:00",
+        startedAt: null,
+        finishedAt: null,
+        correlationId: "b1000000-0000-4000-8000-202609220002",
+      }).success,
+    ).toBe(true);
   });
 });

@@ -65,9 +65,9 @@ export const blenderJobSchema = z.object({
   result: z.record(z.string(), z.unknown()).nullable(),
   error: blenderJobErrorSchema.nullable(),
   attempts: z.int().nonnegative(),
-  createdAt: z.iso.datetime(),
-  startedAt: z.iso.datetime().nullable(),
-  finishedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime({ offset: true }),
+  startedAt: z.iso.datetime({ offset: true }).nullable(),
+  finishedAt: z.iso.datetime({ offset: true }).nullable(),
   correlationId: jobIdSchema,
 });
 
