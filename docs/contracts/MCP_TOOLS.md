@@ -73,12 +73,17 @@ Entrada:
 
 Saída:
 - jobId.
+- status `queued` em B1;
+- correlationId;
+- `simulated: true` enquanto o worker Blender não existe.
 
 Resultado:
 - GLB metadata;
 - size;
 - validation summary;
 - artifact reference.
+
+Em B1, não existe resultado de artefato. A simulação significa que a solicitação é persistida e consultável, não que um GLB fake foi produzido.
 
 ## blender.get_job_status
 

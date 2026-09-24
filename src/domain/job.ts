@@ -49,3 +49,43 @@ export interface BlenderJob {
   finishedAt: string | null;
   correlationId: string;
 }
+
+export const blenderJobErrorSchema = z.object({
+  code: z.string().trim().min(1).max(64),
+  message: z.string().trim().min(1).max(2_000),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const blenderJobSchema = z.object({
+  id: jobIdSchema,
+  operation: blenderOperationSchema,
+  status: blenderJobStatusSchema,
+  assetId: assetIdSchema,
+  payload: z.record(z.string(), z.unknown()),
+  result: z.record(z.string(), z.unknown()).nullable(),
+  error: blenderJobErrorSchema.nullable(),
+  attempts: z.int().nonnegative(),
+  createdAt: z.iso.datetime({ offset: true }),
+  startedAt: z.iso.datetime({ offset: true }).nullable(),
+  finishedAt: z.iso.datetime({ offset: true }).nullable(),
+  correlationId: jobIdSchema,
+});
+
+const allowedTransitions: Readonly<Record<BlenderJobStatus, readonly BlenderJobStatus[]>> = {
+  queued: ["processing", "cancelled"],
+  processing: ["completed", "failed", "cancelled"],
+  completed: [],
+  failed: [],
+  cancelled: [],
+};
+
+export function canTransitionJob(from: BlenderJobStatus, to: BlenderJobStatus): boolean {
+  return allowedTransitions[from].includes(to);
+}
+
+export class InvalidJobTransitionError extends Error {
+  constructor(from: BlenderJobStatus, to: BlenderJobStatus) {
+    super(`Invalid Blender job transition: ${from} -> ${to}`);
+    this.name = "InvalidJobTransitionError";
+  }
+}
