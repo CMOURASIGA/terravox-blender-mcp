@@ -1,0 +1,48 @@
+[Unit]
+Description=TerraVox Blender Worker (B2)
+Documentation=https://github.com/CMOURASIGA/terravox-blender-mcp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=terravox
+Group=terravox
+WorkingDirectory=/opt/terravox-blender-mcp
+# Secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) live here, mode 0600 root:root. Never in the repo.
+EnvironmentFile=/etc/terravox-blender-worker.env
+ExecStart=/usr/bin/node dist/src/worker/main.js
+
+# Persistent service: restart on crash, but NOT on configuration errors (exit 78 = Blender
+# or scripts missing at startup), which would otherwise loop forever.
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=78
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Graceful shutdown: SIGTERM to the worker only; it aborts/releases the running job itself.
+# TimeoutStopSec must exceed WORKER_SHUTDOWN_GRACE_MS (30s) + kill grace.
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=60
+
+# Per-job workspaces live in the state directory (/var/lib/terravox-blender-worker).
+StateDirectory=terravox-blender-worker
+StateDirectoryMode=0700
+Environment=WORKER_WORKSPACE_ROOT=/var/lib/terravox-blender-worker/workspaces
+
+# Hardening (Blender needs no network, no home, no privileges)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=4G
+TasksMax=512
+
+[Install]
+WantedBy=multi-user.target

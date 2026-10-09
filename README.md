@@ -61,3 +61,13 @@ MCP/API -> Job Service -> Queue/Persistence -> Blender Worker -> Blender CLI
 Em B1, MCP/API, Job Service e Queue/Persistence estão implementados. `blender.export_glb` cria um job `queued` com `simulated: true`; como ainda não há worker, nenhum job é processado automaticamente. O claim/lease existe apenas como contrato interno para o B2.
 
 Consulte [docs/DEPLOYMENT_VERCEL.md](docs/DEPLOYMENT_VERCEL.md) para publicação e Human Validation.
+
+## B2 - Blender Worker
+
+Worker Linux persistente (fora da Vercel) que consome jobs `inspect_asset` do Supabase e executa Blender headless. Veja `docs/runbooks/B2_WORKER_RUNBOOK.md`.
+
+```bash
+npm run asset:cube                    # gera o fixture local assets/blender/cube.blend
+npm run build && npm run worker:start # worker
+node --env-file=.env dist/scripts/e2e-cube.js   # E2E real (cube-test)
+```

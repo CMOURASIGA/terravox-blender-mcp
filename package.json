@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker:start": "node dist/src/worker/main.js",
+    "e2e:cube": "node dist/scripts/e2e-cube.js",
+    "asset:cube": "blender --background --factory-startup --python tools/blender/make_cube.py -- assets/blender/cube.blend"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

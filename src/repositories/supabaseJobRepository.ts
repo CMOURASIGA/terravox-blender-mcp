@@ -10,6 +10,9 @@ import type {
   JobRepository,
   JobStateUpdate,
   JobStoreHealth,
+  LeaseRelease,
+  LeaseRenewal,
+  OwnedOutcome,
 } from "./jobRepository.js";
 
 interface BlenderJobRow {
@@ -113,6 +116,66 @@ export class SupabaseJobRepository implements JobRepository {
     if (response.error) throw databaseError("claim", response.error);
     const rows = response.data as BlenderJobRow[] | null;
     return rows?.[0] ? toJob(rows[0]) : null;
+  }
+
+  async renewLease(jobId: string, options: LeaseRenewal): Promise<boolean> {
+    const now = new Date().toISOString();
+    const { data, error } = await this.client
+      .from("blender_jobs")
+      .update({ lease_expires_at: new Date(Date.now() + options.leaseSeconds * 1_000).toISOString() })
+      .eq("id", jobId)
+      .eq("status", "processing")
+      .eq("lease_owner", options.workerId)
+      .gt("lease_expires_at", now)
+      .select("id");
+
+    if (error) throw databaseError("renew lease", error);
+    return data.length > 0;
+  }
+
+  async finishOwned(jobId: string, workerId: string, outcome: OwnedOutcome): Promise<boolean> {
+    const changes: Record<string, unknown> = {
+      status: outcome.status,
+      finished_at: new Date().toISOString(),
+      lease_owner: null,
+      lease_expires_at: null,
+    };
+    if (outcome.status === "completed") {
+      changes.result = outcome.result;
+      changes.error = null;
+    } else {
+      changes.error = outcome.error;
+    }
+
+    const { data, error } = await this.client
+      .from("blender_jobs")
+      .update(changes)
+      .eq("id", jobId)
+      .eq("status", "processing")
+      .eq("lease_owner", workerId)
+      .gt("lease_expires_at", new Date().toISOString())
+      .select("id");
+
+    if (error) throw databaseError("finish", error);
+    return data.length > 0;
+  }
+
+  async releaseLease(jobId: string, workerId: string, release: LeaseRelease): Promise<boolean> {
+    const expiresAt = release.retryAfterMs > 0 ? new Date(Date.now() + release.retryAfterMs) : new Date(0);
+    const changes: Record<string, unknown> = { lease_expires_at: expiresAt.toISOString() };
+    if (release.error) changes.error = release.error;
+
+    const { data, error } = await this.client
+      .from("blender_jobs")
+      .update(changes)
+      .eq("id", jobId)
+      .eq("status", "processing")
+      .eq("lease_owner", workerId)
+      .gt("lease_expires_at", new Date().toISOString())
+      .select("id");
+
+    if (error) throw databaseError("release lease", error);
+    return data.length > 0;
   }
 
   async health(): Promise<JobStoreHealth> {
