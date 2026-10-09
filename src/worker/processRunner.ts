@@ -112,7 +112,9 @@ export class SpawnProcessRunner implements ProcessRunner {
         } catch {
           try {
             child.kill(signal);
-          } catch {}
+          } catch {
+            // Process may already have exited; nothing else is required here.
+          }
         }
       };
 
