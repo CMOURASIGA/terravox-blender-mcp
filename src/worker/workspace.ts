@@ -69,7 +69,9 @@ export class WorkspaceManager {
         if (Date.now() - stats.mtimeMs < maxAgeMs) continue;
         await rm(dir, { recursive: true, force: true });
         removed += 1;
-      } catch {}
+      } catch {
+        // Ignore individual stale-workspace cleanup failures and continue sweeping.
+      }
     }
     if (removed > 0) this.log.info("worker.stale_workspaces_removed", { removed });
     return removed;
